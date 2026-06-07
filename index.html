@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probador Virtual IA — Óptica De la Rosa</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--rojo:#C8102E;--rojo-d:#9B0B21;--negro:#111;--crema:#F8F5F0;--gris:#888;--borde:#E0DDD8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--crema);color:var(--negro);min-height:100vh}
+.header{background:var(--negro);color:white;padding:.85rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Playfair Display',serif;font-size:1.2rem}.logo span{color:var(--rojo)}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.header-right{font-size:11px;color:rgba(255,255,255,.3)}
+.container{max-width:1140px;margin:0 auto;padding:1.5rem}
+.hero-title{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:400;margin-bottom:.25rem}
+.hero-sub{font-size:13px;color:var(--gris);margin-bottom:1.2rem}
+.main-grid{display:grid;grid-template-columns:1fr 330px;gap:1.5rem;align-items:start}
+.viewer-wrap{background:white;border:1px solid var(--borde);border-radius:16px;overflow:hidden}
+.viewer-toolbar{background:var(--negro);padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tbtn{background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.15);padding:4px 14px;font-size:11px;border-radius:18px;cursor:pointer;font-family:'Outfit',sans-serif;transition:background .18s;white-space:nowrap}
+.tbtn:hover{background:rgba(255,255,255,.25)}.tbtn.red{background:var(--rojo);border-color:var(--rojo)}.tbtn.red:hover{background:var(--rojo-d)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);padding:3px 9px;border-radius:14px}
+.dot{width:6px;height:6px;border-radius:50%;background:#888}
+.dot.verde{background:#4ade80;animation:pulso 1.4s infinite}
+.dot.amarillo{background:#facc15;animation:pulso 1.4s infinite}
+@keyframes pulso{0%,100%{opacity:1}50%{opacity:.3}}
+.viewer-body{position:relative;background:#111;min-height:440px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screenStart{text-align:center;padding:2.5rem;color:white}
+.start-title{font-family:'Playfair Display',serif;font-size:1.35rem;color:white;margin-bottom:.4rem}
+.start-sub{font-size:12.5px;color:rgba(255,255,255,.5);margin-bottom:1.5rem;line-height:1.6}
+.start-opts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.start-btn{display:flex;flex-direction:column;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:.9rem 1.2rem;cursor:pointer;color:white;font-family:'Outfit',sans-serif;font-size:13px;transition:background .18s,border-color .18s;min-width:130px}
+.start-btn:hover{background:rgba(255,255,255,.15);border-color:var(--rojo)}
+.start-btn .icon{font-size:28px}.start-btn .lbl{font-size:11px;color:rgba(255,255,255,.6);text-align:center}
+#videoEl{display:none;width:100%;max-height:500px;object-fit:cover;transform:scaleX(-1)}
+#overlayCanvas{display:none;position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#photoCanvas{display:none;max-width:100%;max-height:500px}
+#loadingEl{display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);flex-direction:column;align-items:center;justify-content:center;gap:12px;color:white;font-size:13px}
+#loadingEl.show{display:flex}
+.spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--rojo);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#errorEl{display:none;text-align:center;padding:2rem;color:white}
+#errorEl.show{display:block}
+.err-titulo{color:#ff7070;font-size:1rem;font-weight:500;margin:.5rem 0}
+.err-pasos{text-align:left;background:rgba(255,255,255,.07);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:12px;color:rgba(255,255,255,.75);line-height:2.2}
+.ia-metrics{background:#0d1117;padding:.5rem 1rem;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.ia-metrics.show{display:flex}
+.ia-metric{font-size:10px;color:rgba(255,255,255,.45)}.ia-metric strong{color:rgba(255,255,255,.8)}
+.ia-metric.ok strong{color:#4ade80}.ia-metric.warn strong{color:#facc15}
+.controls{display:flex;flex-direction:column;gap:.9rem}
+.panel{background:white;border:1px solid var(--borde);border-radius:12px;overflow:hidden}
+.panel-head{background:var(--negro);color:white;padding:.5rem .9rem;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;display:flex;align-items:center;justify-content:space-between}
+.panel-body{padding:.85rem}
+.catalog-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.catalog-item{border:2px solid var(--borde);border-radius:10px;overflow:hidden;cursor:pointer;transition:all .18s;background:white;position:relative}
+.catalog-item:hover{border-color:#999;transform:translateY(-1px)}.catalog-item.sel{border-color:var(--rojo)}
+.catalog-thumb{width:100%;height:72px;display:block;background:white}
+.catalog-info{padding:5px 8px 7px;border-top:0.5px solid var(--borde)}
+.catalog-name{font-size:10.5px;font-weight:500;color:var(--negro);line-height:1.3}
+.catalog-brand{font-size:9.5px;color:var(--gris)}
+.cat-badge{position:absolute;top:5px;right:5px;font-size:8px;padding:2px 6px;border-radius:8px;font-weight:600}
+.cat-badge.nuevo{background:#E1F5EE;color:#085041}.cat-badge.popular{background:#FAEEDA;color:#633806}
+.frame-info-box{background:var(--crema);border-radius:8px;padding:.7rem .85rem;margin-bottom:.7rem;border:0.5px solid var(--borde)}
+.frame-info-name{font-size:13px;font-weight:500;color:var(--negro)}
+.frame-info-brand{font-size:11px;color:var(--gris);margin-bottom:.35rem}
+.frame-tags{display:flex;gap:4px;flex-wrap:wrap}
+.ftag{font-size:10px;padding:2px 7px;border-radius:10px;background:white;border:0.5px solid var(--borde);color:var(--gris)}
+.color-row{display:flex;gap:6px;flex-wrap:wrap}
+.color-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .14s,border-color .14s}
+.color-dot:hover{transform:scale(1.18)}.color-dot.sel{border-color:var(--negro);transform:scale(1.1)}
+#colorName{font-size:11px;color:var(--gris);margin-top:.4rem}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.toggle-lbl{font-size:12px;color:var(--negro)}
+.toggle{position:relative;width:38px;height:20px}
+.toggle input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;background:#ccc;border-radius:10px;cursor:pointer;transition:.25s}
+.tslider:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.25s}
+input:checked+.tslider{background:var(--rojo)}
+input:checked+.tslider:before{transform:translateX(18px)}
+.ia-note{font-size:10.5px;color:var(--gris);line-height:1.5;margin-bottom:.6rem}
+.manual-adj.ia-on{opacity:.35;pointer-events:none}
+.adj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:.5rem}
+.adj-btn{background:var(--crema);border:1px solid var(--borde);border-radius:6px;padding:6px;font-size:15px;cursor:pointer;text-align:center;transition:background .14s}
+.adj-btn:hover{background:var(--borde)}.adj-center{display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gris)}
+.slider-row{margin-bottom:.65rem}
+.slider-label{display:flex;justify-content:space-between;font-size:11px;color:var(--gris);margin-bottom:3px}
+.slider-label span:last-child{color:var(--negro);font-weight:500}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;background:var(--borde);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--rojo);cursor:pointer}
+.cta-box{background:var(--rojo);border-radius:12px;padding:1rem;text-align:center}
+.cta-title{font-family:'Playfair Display',serif;color:white;font-size:.95rem;margin-bottom:.3rem}
+.cta-sub{font-size:11px;color:rgba(255,255,255,.8);margin-bottom:.8rem;line-height:1.5}
+.btn-call,.btn-wa{border:none;padding:9px 18px;border-radius:22px;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;width:100%;margin-bottom:6px}
+.btn-call{background:white;color:var(--rojo)}.btn-wa{background:#25D366;color:white;margin-bottom:0}
+#fileInput{display:none}
+.footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--gris);border-top:1px solid var(--borde);margin-top:1.5rem}
+@media(max-width:740px){.main-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="logo">Óptica <span>De la Rosa</span></div>
+    <div class="logo-sub">Probador Virtual con IA</div>
+  </div>
+  <div class="header-right">Av. San Martín 151 · Banda del Río Salí</div>
+</div>
+<div class="container">
+  <div class="hero-title">Probate el armazón antes de comprarlo</div>
+  <div class="hero-sub">La IA detecta tu rostro y posiciona el armazón automáticamente. Sin ajustes manuales.</div>
+  <div class="main-grid">
+    <div>
+      <div class="viewer-wrap">
+        <div class="viewer-toolbar">
+          <div><span class="badge"><span class="dot" id="dotEl"></span><span id="badgeText">Elegí un armazón y activá la cámara</span></span></div>
+          <div style="display:flex;gap:6px">
+            <button class="tbtn" id="btnCapture" onclick="capturePhoto()" style="display:none">📸 Capturar</button>
+            <button class="tbtn" id="btnRetake" onclick="goToStart()" style="display:none">↩ Volver</button>
+            <button class="tbtn red" id="btnDownload" onclick="downloadPhoto()" style="display:none">⬇ Descargar</button>
+          </div>
+        </div>
+        <div class="viewer-body">
+          <div id="screenStart">
+            <div style="font-size:50px;margin-bottom:.9rem">👓</div>
+            <div class="start-title">¿Cómo querés probar el armazón?</div>
+            <div class="start-sub">Seleccioná un armazón del catálogo y elegí cómo probártelo</div>
+            <div class="start-opts">
+              <button class="start-btn" onclick="startCamera()">
+                <span class="icon">📷</span><strong>Cámara en vivo</strong>
+                <span class="lbl">IA detecta tu rostro automáticamente</span>
+              </button>
+              <button class="start-btn" onclick="document.getElementById('fileInput').click()">
+                <span class="icon">🖼️</span><strong>Subir foto</strong>
+                <span class="lbl">Usá una selfie de tu galería</span>
+              </button>
+            </div>
+          </div>
+          <video id="videoEl" autoplay playsinline muted></video>
+          <canvas id="overlayCanvas"></canvas>
+          <canvas id="photoCanvas"></canvas>
+          <div id="loadingEl"><div class="spinner"></div><span id="loadingText">Activando cámara...</span></div>
+          <div id="errorEl">
+            <div style="font-size:36px">⚠️</div>
+            <div class="err-titulo">No se pudo acceder a la cámara</div>
+            <div class="err-pasos">
+              1️⃣ Hacé clic en el ícono 🔒 en la barra de dirección<br>
+              2️⃣ Buscá <strong>Cámara</strong> → cambiá a <strong>Permitir</strong><br>
+              3️⃣ Recargá la página con F5 y volvé a intentar
+            </div>
+            <button class="tbtn red" onclick="goToStart()" style="margin:0 auto;display:block">← Volver</button>
+          </div>
+        </div>
+        <div class="ia-metrics" id="iaMetrics">
+          <div class="ia-metric" id="metFace">Detección: <strong>iniciando...</strong></div>
+          <div class="ia-metric" id="metInfo">Método: <strong>análisis de píxeles</strong></div>
+          <div class="ia-metric" id="metAjuste">Ajuste: <strong>—</strong></div>
+          <div style="font-size:9px;color:rgba(255,255,255,.25)">IA · Skin Detection</div>
+        </div>
+      </div>
+      <div id="adjustPanel" style="display:none;margin-top:.9rem">
+        <div class="panel">
+          <div class="panel-head">Ajuste de posición</div>
+          <div class="panel-body">
+            <div class="toggle-row">
+              <span class="toggle-lbl">🤖 Detección IA automática</span>
+              <label class="toggle"><input type="checkbox" id="iaToggle" checked onchange="toggleIA(this.checked)"><span class="tslider"></span></label>
+            </div>
+            <div class="ia-note" id="iaNoteEl">La IA analiza el video y posiciona el armazón en la zona de los ojos automáticamente.</div>
+            <div class="manual-adj ia-on" id="manualAdj">
+              <div class="adj-grid">
+                <div></div><button class="adj-btn" onclick="move(0,-6)">↑</button><div></div>
+                <button class="adj-btn" onclick="move(-8,0)">←</button><div class="adj-center">mover</div><button class="adj-btn" onclick="move(8,0)">→</button>
+                <div></div><button class="adj-btn" onclick="move(0,6)">↓</button><div></div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label"><span>Tamaño</span><span id="sizeVal">100%</span></div>
+                <input type="range" id="sizeSlider" min="40" max="200" value="100" step="1" oninput="onSize(this.value)">
+              </div>
+              <div class="slider-row">
+                <div class="slider-label"><span>Altura</span><span id="heightVal">40%</span></div>
+                <input type="range" id="heightSlider" min="15" max="70" value="40" step="1" oninput="onHeight(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="panel">
+        <div class="panel-head">
+          <span>Catálogo de armazones</span>
+          <span style="font-size:9px;color:rgba(255,255,255,.5)" id="catalogCount"></span>
+        </div>
+        <div class="panel-body">
+          <div class="catalog-grid" id="catalogGrid"></div>
+        </div>
+      </div>
+      <div class="panel" id="frameInfoPanel" style="display:none">
+        <div class="panel-head">Armazón seleccionado</div>
+        <div class="panel-body">
+          <div class="frame-info-box">
+            <div class="frame-info-name" id="infoName"></div>
+            <div class="frame-info-brand" id="infoBrand"></div>
+            <div class="frame-tags" id="infoTags"></div>
+          </div>
+          <div style="font-size:10px;font-weight:500;color:var(--gris);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Color</div>
+          <div class="color-row" id="colorRow"></div>
+          <div id="colorName" style="font-size:11px;color:var(--gris);margin-top:.4rem"></div>
+        </div>
+      </div>
+      <div class="cta-box">
+        <div class="cta-title">¿Te gustó cómo te queda?</div>
+        <div class="cta-sub">Contactanos y te asesoramos para encontrar los lentes perfectos para tu receta.</div>
+        <button class="btn-call" onclick="window.open('tel:+5493816631275')">📞 Llamar ahora</button>
+        <button class="btn-wa" onclick="contactWA()">💬 Consultar por WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="footer">© 2025 Óptica De la Rosa · Av. San Martín 151, Banda del Río Salí, Tucumán · +54 9 381 663-1275</div>
+<input type="file" id="fileInput" accept="image/*" onchange="loadFile(event)">
+
+<script>
+// ═══════════════════════════════════════════
+// FUNCIONES DE DIBUJO POR ARMAZÓN
+// ═══════════════════════════════════════════
+function drawAviador(ctx,cx,cy,w,h,col){
+  const lw=w*.44,lh=h*.72;
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.012);ctx.fillStyle=col+'22';
+  [cx-w*.25,cx+w*.25].forEach(x=>{ctx.beginPath();ctx.ellipse(x,cy,lw/2,lh/2,0,0,Math.PI*2);ctx.fill();ctx.stroke()});
+  ctx.beginPath();ctx.moveTo(cx-w*.03,cy-lh*.08);ctx.quadraticCurveTo(cx,cy-lh*.22,cx+w*.03,cy-lh*.08);ctx.stroke();
+  ctx.lineWidth=Math.max(1.5,w*.009);
+  [[cx-w*.25-lw/2,cy-lh*.1,cx-w*.5,cy],[cx+w*.25+lw/2,cy-lh*.1,cx+w*.5,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+}
+function drawRectangular(ctx,cx,cy,w,h,col){
+  const lw=w*.43,lh=h*.55,r=Math.max(4,w*.02);
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.012);ctx.fillStyle=col+'18';
+  [cx-w*.25,cx+w*.25].forEach(x=>{ctx.beginPath();ctx.roundRect(x-lw/2,cy-lh/2,lw,lh,r);ctx.fill();ctx.stroke()});
+  ctx.lineWidth=Math.max(1.5,w*.009);ctx.beginPath();ctx.moveTo(cx-w*.04,cy);ctx.lineTo(cx+w*.04,cy);ctx.stroke();
+  [[cx-w*.25-lw/2,cy-lh*.15,cx-w*.5,cy],[cx+w*.25+lw/2,cy-lh*.15,cx+w*.5,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+}
+function drawRedondo(ctx,cx,cy,w,h,col){
+  const r=h*.38;
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.011);ctx.fillStyle=col+'18';
+  [cx-w*.23,cx+w*.23].forEach(x=>{ctx.beginPath();ctx.arc(x,cy,r,0,Math.PI*2);ctx.fill();ctx.stroke()});
+  ctx.lineWidth=Math.max(1.5,w*.009);ctx.beginPath();ctx.moveTo(cx-w*.23+r,cy-r*.1);ctx.lineTo(cx+w*.23-r,cy-r*.1);ctx.stroke();
+  [[cx-w*.23-r,cy-r*.1,cx-w*.48,cy+r*.1],[cx+w*.23+r,cy-r*.1,cx+w*.48,cy+r*.1]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+}
+function drawCatEye(ctx,cx,cy,w,h,col){
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(2.5,w*.013);ctx.fillStyle=col+'20';
+  [-1,1].forEach(s=>{
+    const ox=cx+s*w*.24;
+    ctx.beginPath();ctx.moveTo(ox-s*w*.21,cy+h*.22);ctx.quadraticCurveTo(ox-s*w*.22,cy-h*.2,ox+s*w*.01,cy-h*.38);ctx.quadraticCurveTo(ox+s*w*.22,cy-h*.1,ox+s*w*.2,cy+h*.22);ctx.quadraticCurveTo(ox,cy+h*.34,ox-s*w*.21,cy+h*.22);ctx.closePath();ctx.fill();ctx.stroke();
+  });
+  ctx.lineWidth=Math.max(1.5,w*.009);ctx.beginPath();ctx.moveTo(cx-w*.03,cy);ctx.lineTo(cx+w*.03,cy);ctx.stroke();
+}
+function drawWayfarer(ctx,cx,cy,w,h,col){
+  const lw=w*.43,lh=h*.62;
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(3,w*.016);ctx.fillStyle=col+'22';
+  [cx-w*.245,cx+w*.245].forEach(x=>{
+    ctx.beginPath();ctx.moveTo(x-lw/2,cy-lh*.35);ctx.lineTo(x+lw/2,cy-lh*.48);ctx.lineTo(x+lw/2,cy+lh*.38);ctx.quadraticCurveTo(x+lw/2,cy+lh*.52,x+lw*.3,cy+lh*.52);ctx.lineTo(x-lw*.3,cy+lh*.52);ctx.quadraticCurveTo(x-lw/2,cy+lh*.52,x-lw/2,cy+lh*.38);ctx.closePath();ctx.fill();ctx.stroke();
+  });
+  ctx.lineWidth=Math.max(2,w*.011);ctx.beginPath();ctx.moveTo(cx-w*.03,cy-lh*.1);ctx.lineTo(cx+w*.03,cy-lh*.1);ctx.stroke();
+  ctx.lineWidth=Math.max(1.5,w*.009);
+  [[cx-w*.245-lw/2,cy-lh*.2,cx-w*.49,cy],[cx+w*.245+lw/2,cy-lh*.2,cx+w*.49,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+}
+function drawOakleyBrowline(ctx,cx,cy,w,h,col){
+  const lw=w*.42,barH=h*.32,fullH=h*.62;
+  const lx=cx-w*.245,rx=cx+w*.245;
+  const metal=col==='#1a1a1a'?'#888888':col;
+  ctx.save();
+  // Barra superior izq
+  ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=Math.max(1.5,w*.008);
+  ctx.beginPath();ctx.roundRect(lx-lw/2,cy-fullH/2,lw,barH,[4,4,0,0]);ctx.fill();ctx.stroke();
+  // Barra superior der
+  ctx.beginPath();ctx.roundRect(rx-lw/2,cy-fullH/2,lw,barH,[4,4,0,0]);ctx.fill();ctx.stroke();
+  // Aro inferior izq (metal)
+  ctx.strokeStyle=metal;ctx.fillStyle='transparent';ctx.lineWidth=Math.max(1.2,w*.006);
+  ctx.beginPath();
+  ctx.moveTo(lx-lw/2,cy-fullH/2+barH);ctx.lineTo(lx+lw/2,cy-fullH/2+barH);
+  ctx.arcTo(lx+lw/2,cy+fullH/2,lx-lw/2,cy+fullH/2,5);
+  ctx.arcTo(lx-lw/2,cy+fullH/2,lx-lw/2,cy-fullH/2+barH,5);
+  ctx.closePath();ctx.stroke();
+  // Aro inferior der
+  ctx.beginPath();
+  ctx.moveTo(rx-lw/2,cy-fullH/2+barH);ctx.lineTo(rx+lw/2,cy-fullH/2+barH);
+  ctx.arcTo(rx+lw/2,cy+fullH/2,rx-lw/2,cy+fullH/2,5);
+  ctx.arcTo(rx-lw/2,cy+fullH/2,rx-lw/2,cy-fullH/2+barH,5);
+  ctx.closePath();ctx.stroke();
+  // Puente nariz
+  const bridgeY=cy-fullH/2+barH*.6;
+  ctx.strokeStyle=metal;ctx.lineWidth=Math.max(1.5,w*.007);
+  ctx.beginPath();ctx.moveTo(lx+lw/2,bridgeY);ctx.quadraticCurveTo(cx,bridgeY-h*.06,rx-lw/2,bridgeY);ctx.stroke();
+  // Patillas
+  ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.01);
+  ctx.beginPath();ctx.moveTo(lx-lw/2,cy-fullH/2+barH*.35);ctx.lineTo(lx-lw/2-w*.07,cy-fullH/2+barH*.35);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(rx+lw/2,cy-fullH/2+barH*.35);ctx.lineTo(rx+lw/2+w*.07,cy-fullH/2+barH*.35);ctx.stroke();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════
+// CATÁLOGO
+// ═══════════════════════════════════════════
+const CATALOG=[
+  {id:'oakley',name:'Browline Metal',brand:'Oakley',tags:['Semi-rimless','Metal','Unisex'],
+   colors:['#1a1a1a','#7A7A7A','#B8970F','#1B2A6B'],badge:'Nuevo',badgeClass:'nuevo',
+   img:'armazonmetal.png',fn:drawOakleyBrowline},
+  {id:'persol',name:'Redondo Carey',brand:'Persol',tags:['Redondo','Acetato','Unisex'],
+   colors:['#7B4A1E','#1a1a1a','#C4873A','#4A6741'],badge:'Popular',badgeClass:'popular',
+   img:'armazonacetato2.png',fn:drawRedondo},
+  {id:'acetato',name:'Clásico Acetato',brand:'De la Rosa',tags:['Clásico','Acetato','Unisex'],
+   colors:['#1a1a1a','#7B4A1E','#1B2A6B','#C8102E'],badge:null,
+   img:'armazonacetato.png',fn:drawRectangular},
+  {id:'aviador',name:'Aviador Clásico',brand:'De la Rosa',tags:['Clásico','Metal','Unisex'],
+   colors:['#1a1a1a','#B8970F','#7A7A7A','#C8102E'],badge:null,img:null,fn:drawAviador},
+  {id:'cateye',name:'Cat Eye Elegante',brand:'De la Rosa',tags:['Femenino','Acetato','Mujer'],
+   colors:['#1a1a1a','#C8102E','#7B4A1E','#C4857A'],badge:null,img:null,fn:drawCatEye},
+  {id:'wayfarer',name:'Wayfarer Sport',brand:'De la Rosa',tags:['Deportivo','Acetato','Unisex'],
+   colors:['#1a1a1a','#7B4A1E','#1B2A6B','#4A6741'],badge:null,img:null,fn:drawWayfarer},
+];
+
+const COLORS_MAP={'#1a1a1a':'Negro mate','#7B4A1E':'Carey marrón','#C4873A':'Carey caramelo','#C8102E':'Rojo De la Rosa','#1B2A6B':'Azul marino','#4A6741':'Verde oliva','#B8970F':'Dorado','#7A7A7A':'Plateado','#C4857A':'Rosa nude','#7AAABB':'Transparente'};
+
+let currentFrame=CATALOG[0],currentColor=CATALOG[0].colors[0];
+let iaActive=true,mode='start';
+let stream=null,animFrame=null;
+let offsetX=0,offsetY=0,scaleM=1,heightFrac=38;
+// estado de detección
+let faceBox=null; // {cx,cy,w,h} en coordenadas del overlay
+let skinCanvas=null,skinCtx=null; // canvas oculto para análisis
+
+// ═══════════════════════════════════════════
+// CONSTRUCCIÓN DEL CATÁLOGO CON CANVAS
+// ═══════════════════════════════════════════
+function buildCatalog(){
+  const grid=document.getElementById('catalogGrid');
+  grid.innerHTML='';
+  CATALOG.forEach(f=>{
+    const item=document.createElement('div');
+    item.className='catalog-item'+(f.id===currentFrame.id?' sel':'');
+    item.onclick=()=>selectFrame(f);
+    if(f.badge){
+      const b=document.createElement('div');
+      b.className='cat-badge '+(f.badgeClass||'');
+      b.textContent=f.badge;item.appendChild(b);
+    }
+    if(f.img){
+      // Foto real
+      const wrap=document.createElement('div');
+      wrap.style.cssText='width:100%;height:72px;background:white;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+      const img=document.createElement('img');
+      img.src=f.img;
+      img.style.cssText='max-width:100%;max-height:68px;object-fit:contain;padding:4px;';
+      img.alt=f.name;
+      // Fallback a canvas si la imagen no carga
+      img.onerror=()=>{
+        wrap.innerHTML='';
+        const c=document.createElement('canvas');
+        c.width=200;c.height=68;
+        const ctx=c.getContext('2d');
+        f.fn(ctx,100,34,175,52,f.colors[0]);
+        c.style.cssText='width:100%;height:68px;';
+        wrap.appendChild(c);
+      };
+      wrap.appendChild(img);item.appendChild(wrap);
+    }else{
+      // Canvas vectorial
+      const c=document.createElement('canvas');
+      c.className='catalog-thumb';c.width=200;c.height=72;
+      const ctx=c.getContext('2d');
+      ctx.clearRect(0,0,200,72);
+      f.fn(ctx,100,36,175,55,f.colors[0]);
+      item.appendChild(c);
+    }
+    const info=document.createElement('div');
+    info.className='catalog-info';
+    info.innerHTML=`<div class="catalog-name">${f.name}</div><div class="catalog-brand">${f.brand}</div>`;
+    item.appendChild(info);
+    grid.appendChild(item);
+  });
+  document.getElementById('catalogCount').textContent=CATALOG.length+' modelos';
+}
+
+function selectFrame(f){
+  currentFrame=f;currentColor=f.colors[0];
+  document.querySelectorAll('.catalog-item').forEach((el,i)=>el.classList.toggle('sel',CATALOG[i].id===f.id));
+  document.getElementById('frameInfoPanel').style.display='block';
+  document.getElementById('infoName').textContent=f.name;
+  document.getElementById('infoBrand').textContent=f.brand;
+  document.getElementById('infoTags').innerHTML=f.tags.map(t=>`<span class="ftag">${t}</span>`).join('');
+  buildColors(f);
+}
+function buildColors(f){
+  const row=document.getElementById('colorRow');row.innerHTML='';
+  f.colors.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='color-dot'+(c===currentColor?' sel':'');
+    d.style.background=c;d.title=COLORS_MAP[c]||c;
+    d.onclick=()=>{currentColor=c;document.getElementById('colorName').textContent=COLORS_MAP[c]||c;buildColors(f)};
+    row.appendChild(d);
+  });
+  document.getElementById('colorName').textContent=COLORS_MAP[currentColor]||currentColor;
+}
+
+// ═══════════════════════════════════════════
+// DETECCIÓN FACIAL — ANÁLISIS DE SKIN TONE
+// sin dependencias externas, funciona en Edge
+// ═══════════════════════════════════════════
+function initSkinCanvas(){
+  skinCanvas=document.createElement('canvas');
+  skinCanvas.width=80;skinCanvas.height=60; // pequeño para performance
+  skinCtx=skinCanvas.getContext('2d',{willReadFrequently:true});
+}
+
+function isSkin(r,g,b){
+  // Criterios múltiples para detectar piel en distintas tonalidades
+  const cr=0.299*r+0.587*g+0.114*b; // luminancia
+  const cb=128-0.16874*r-0.33126*g+0.5*b;
+  const crNorm=r-cr;
+  // Rango YCbCr para piel (amplio, cubre tonos claros, morenos, oscuros)
+  const ycbcr=(cb>=77&&cb<=127&&crNorm>=133&&crNorm<=173);
+  // Rango RGB simple
+  const rgb=(r>60&&g>40&&b>20&&r>g&&r>b&&(r-Math.min(g,b))>10);
+  return ycbcr||rgb;
+}
+
+function detectFaceFromPixels(video,overlayW,overlayH){
+  if(!skinCtx||!video.videoWidth)return null;
+  const W=skinCanvas.width,H=skinCanvas.height;
+  // Espejamos al dibujar (igual que el video)
+  skinCtx.save();skinCtx.translate(W,0);skinCtx.scale(-1,1);
+  skinCtx.drawImage(video,0,0,W,H);
+  skinCtx.restore();
+  const data=skinCtx.getImageData(0,0,W,H).data;
+  // Mapa de piel
+  const skinMap=new Uint8Array(W*H);
+  let totalSkin=0;
+  for(let i=0;i<W*H;i++){
+    const r=data[i*4],g=data[i*4+1],b=data[i*4+2];
+    if(isSkin(r,g,b)){skinMap[i]=1;totalSkin++}
+  }
+  if(totalSkin<80)return null; // muy poca piel detectada
+  // Encontrar bounding box de la región de piel
+  let minX=W,maxX=0,minY=H,maxY=0;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      if(skinMap[y*W+x]){
+        if(x<minX)minX=x;if(x>maxX)maxX=x;
+        if(y<minY)minY=y;if(y>maxY)maxY=y;
+      }
+    }
+  }
+  const fw=maxX-minX,fh=maxY-minY;
+  if(fw<8||fh<8)return null;
+  // Escalar a coordenadas del overlay (espejado)
+  const scaleX=overlayW/W,scaleY=overlayH/H;
+  const fcx=(minX+fw/2)*scaleX;
+  const fcy=(minY+fh/2)*scaleY;
+  const fw2=fw*scaleX,fh2=fh*scaleY;
+  // Zona de ojos: ~35% desde arriba de la cara detectada
+  const eyeY=minY*scaleY+fh2*0.33;
+  return{cx:fcx,cy:eyeY,fw:fw2,fh:fh2,confidence:Math.min(1,totalSkin/(W*H*0.3))};
+}
+
+// ═══════════════════════════════════════════
+// CÁMARA
+// ═══════════════════════════════════════════
+async function startCamera(){
+  showLoading(true,'Activando cámara...');
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+    const video=document.getElementById('videoEl');
+    video.srcObject=stream;await video.play();
+    video.style.display='block';
+    const overlay=document.getElementById('overlayCanvas');overlay.style.display='block';
+    document.getElementById('screenStart').style.display='none';
+    document.getElementById('errorEl').classList.remove('show');
+    document.getElementById('btnCapture').style.display='inline-block';
+    document.getElementById('btnRetake').style.display='none';
+    document.getElementById('btnDownload').style.display='none';
+    document.getElementById('adjustPanel').style.display='block';
+    document.getElementById('iaMetrics').classList.add('show');
+    mode='camera';setBadge('amarillo','Analizando rostro...');
+    initSkinCanvas();
+    showLoading(false);
+    startLoop();
+  }catch(err){
+    showLoading(false);
+    document.getElementById('screenStart').style.display='none';
+    document.getElementById('errorEl').classList.add('show');
+  }
+}
+
+function startLoop(){
+  const video=document.getElementById('videoEl');
+  const overlay=document.getElementById('overlayCanvas');
+  const ctx=overlay.getContext('2d');
+  let fc=0;
+  function loop(){
+    if(mode!=='camera')return;
+    const vr=video.getBoundingClientRect();
+    const W=Math.round(vr.width),H=Math.round(vr.height);
+    if(overlay.width!==W){overlay.width=W;overlay.height=H}
+    ctx.clearRect(0,0,W,H);
+    // Detección cada 8 frames
+    if(iaActive&&fc%8===0&&video.videoWidth){
+      const detected=detectFaceFromPixels(video,W,H);
+      if(detected){
+        faceBox=detected;
+        const conf=Math.round(detected.confidence*100);
+        document.getElementById('metFace').innerHTML='Detección: <strong class="ok">Rostro encontrado ✓</strong>';
+        document.getElementById('metFace').className='ia-metric ok';
+        document.getElementById('metInfo').innerHTML=`Confianza: <strong>${conf}%</strong>`;
+        document.getElementById('metAjuste').innerHTML='Ajuste: <strong style="color:#4ade80">Automático ✓</strong>';
+        setBadge('verde','IA: rostro detectado ✓');
+      }else{
+        if(fc>40){// después de algunos frames sin detectar, limpiar
+          faceBox=null;
+          document.getElementById('metFace').innerHTML='Detección: <strong>buscando rostro...</strong>';
+          document.getElementById('metFace').className='ia-metric warn';
+          setBadge('amarillo','Mirá de frente a la cámara...');
+        }
+      }
+    }
+    fc++;
+    // Dibujar armazón
+    if(iaActive&&faceBox){
+      ctx.save();ctx.translate(faceBox.cx,faceBox.cy);
+      const gW=faceBox.fw*1.05,gH=gW*0.38;
+      currentFrame.fn(ctx,0,0,gW,gH,currentColor);
+      ctx.restore();
+    }else{
+      const cx=W*0.5+offsetX,cy=H*(heightFrac/100)+offsetY;
+      const gW=W*0.56*scaleM,gH=gW*0.38;
+      currentFrame.fn(ctx,cx,cy,gW,gH,currentColor);
+    }
+    animFrame=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ═══════════════════════════════════════════
+// CAPTURA
+// ═══════════════════════════════════════════
+function capturePhoto(){
+  const video=document.getElementById('videoEl');
+  const overlay=document.getElementById('overlayCanvas');
+  const canvas=document.getElementById('photoCanvas');
+  const W=video.videoWidth,H=video.videoHeight;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,W,H);ctx.restore();
+  const sX=W/overlay.width,sY=H/overlay.height;
+  if(iaActive&&faceBox){
+    ctx.save();ctx.translate(faceBox.cx*sX,faceBox.cy*sY);
+    const gW=faceBox.fw*1.05*sX,gH=gW*0.38;
+    currentFrame.fn(ctx,0,0,gW,gH,currentColor);ctx.restore();
+  }else{
+    const cx=W*0.5+offsetX*sX,cy=H*(heightFrac/100)+offsetY*sY;
+    const gW=W*0.56*scaleM,gH=gW*0.38;
+    currentFrame.fn(ctx,cx,cy,gW,gH,currentColor);
+  }
+  stopCamera();
+  canvas.style.display='block';
+  document.getElementById('videoEl').style.display='none';
+  document.getElementById('overlayCanvas').style.display='none';
+  document.getElementById('iaMetrics').classList.remove('show');
+  mode='photo';
+  document.getElementById('btnCapture').style.display='none';
+  document.getElementById('btnRetake').style.display='inline-block';
+  document.getElementById('btnDownload').style.display='inline-block';
+  setBadge('','📸 Capturado — descargá o consultá por WhatsApp');
+}
+
+function stopCamera(){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  faceBox=null;
+}
+
+// ═══════════════════════════════════════════
+// FOTO SUBIDA
+// ═══════════════════════════════════════════
+function loadFile(evt){
+  const file=evt.target.files[0];if(!file)return;evt.target.value='';
+  showLoading(true,'Cargando imagen...');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      stopCamera();
+      document.getElementById('screenStart').style.display='none';
+      ['videoEl','overlayCanvas'].forEach(id=>document.getElementById(id).style.display='none');
+      const canvas=document.getElementById('photoCanvas');
+      const maxW=Math.min(img.width,820);const ratio=maxW/img.width;
+      canvas.width=img.width*ratio;canvas.height=img.height*ratio;
+      const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const W=canvas.width,H=canvas.height;
+      const cx=W*0.5+offsetX,cy=H*(heightFrac/100)+offsetY;
+      const gW=W*0.56*scaleM,gH=gW*0.38;
+      currentFrame.fn(ctx,cx,cy,gW,gH,currentColor);
+      canvas.style.display='block';showLoading(false);mode='photo';
+      document.getElementById('btnCapture').style.display='none';
+      document.getElementById('btnRetake').style.display='inline-block';
+      document.getElementById('btnDownload').style.display='inline-block';
+      document.getElementById('adjustPanel').style.display='block';
+      setBadge('','🖼️ Usá el ajuste fino para centrar el armazón');
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════════
+// TOGGLE & AJUSTE
+// ═══════════════════════════════════════════
+function toggleIA(on){
+  iaActive=on;
+  document.getElementById('manualAdj').classList.toggle('ia-on',on);
+  document.getElementById('iaNoteEl').textContent=on?'La IA analiza el video y posiciona el armazón en la zona de los ojos automáticamente.':'Modo manual activo. Usá las flechas y sliders para ajustar.';
+}
+function move(dx,dy){offsetX+=dx;offsetY+=dy}
+function onSize(v){scaleM=v/100;document.getElementById('sizeVal').textContent=v+'%'}
+function onHeight(v){heightFrac=parseInt(v);document.getElementById('heightVal').textContent=v+'%'}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function goToStart(){
+  stopCamera();mode='start';offsetX=0;offsetY=0;scaleM=1;heightFrac=38;faceBox=null;
+  document.getElementById('sizeSlider').value=100;document.getElementById('heightSlider').value=38;
+  document.getElementById('sizeVal').textContent='100%';document.getElementById('heightVal').textContent='38%';
+  document.getElementById('screenStart').style.display='block';
+  ['videoEl','overlayCanvas','photoCanvas'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('errorEl').classList.remove('show');
+  document.getElementById('iaMetrics').classList.remove('show');
+  ['btnCapture','btnRetake','btnDownload'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('adjustPanel').style.display='none';
+  setBadge('','Elegí un armazón y activá la cámara');
+}
+function showLoading(v,txt=''){document.getElementById('loadingEl').classList.toggle('show',v);if(txt)document.getElementById('loadingText').textContent=txt}
+function setBadge(tipo,txt){const dot=document.getElementById('dotEl');dot.className='dot'+(tipo?' '+tipo:'');document.getElementById('badgeText').textContent=txt}
+function downloadPhoto(){const c=document.getElementById('photoCanvas');if(!c.width)return;const a=document.createElement('a');a.download='optica-de-la-rosa.jpg';a.href=c.toDataURL('image/jpeg',.93);a.click()}
+function contactWA(){const msg=`Hola! Probé el armazón *${currentFrame.name}* (${currentFrame.brand}) en el probador virtual y quiero consultar disponibilidad y precio.`;window.open('https://wa.me/5493816631275?text='+encodeURIComponent(msg))}
+
+// ARRANQUE
+buildCatalog();
+selectFrame(CATALOG[0]);
+</script>
+</body>
+</html>
