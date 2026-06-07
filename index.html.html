@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probador Virtual IA — Óptica De la Rosa</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--rojo:#C8102E;--rojo-d:#9B0B21;--negro:#111;--crema:#F8F5F0;--gris:#888;--borde:#E0DDD8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--crema);color:var(--negro);min-height:100vh}
+.header{background:var(--negro);color:white;padding:.85rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Playfair Display',serif;font-size:1.2rem}.logo span{color:var(--rojo)}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.header-right{font-size:11px;color:rgba(255,255,255,.3)}
+.container{max-width:1100px;margin:0 auto;padding:1.5rem}
+.hero-title{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:400;margin-bottom:.25rem}
+.hero-sub{font-size:13px;color:var(--gris);margin-bottom:1.2rem}
+.main-grid{display:grid;grid-template-columns:1fr 310px;gap:1.5rem;align-items:start}
+.viewer-wrap{background:white;border:1px solid var(--borde);border-radius:16px;overflow:hidden}
+.viewer-toolbar{background:var(--negro);padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tbtn{background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.15);padding:4px 14px;font-size:11px;border-radius:18px;cursor:pointer;font-family:'Outfit',sans-serif;transition:background .18s;white-space:nowrap}
+.tbtn:hover{background:rgba(255,255,255,.25)}.tbtn.red{background:var(--rojo);border-color:var(--rojo)}.tbtn.red:hover{background:var(--rojo-d)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);padding:3px 9px;border-radius:14px}
+.dot{width:6px;height:6px;border-radius:50%;background:#888}
+.dot.verde{background:#4ade80;animation:pulso 1.4s infinite}
+.dot.amarillo{background:#facc15;animation:pulso 1.4s infinite}
+@keyframes pulso{0%,100%{opacity:1}50%{opacity:.3}}
+.viewer-body{position:relative;background:#111;min-height:420px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#screenStart{text-align:center;padding:2.5rem;color:white}
+.start-icon{font-size:50px;display:block;margin-bottom:.9rem}
+.start-title{font-family:'Playfair Display',serif;font-size:1.35rem;color:white;margin-bottom:.4rem}
+.start-sub{font-size:12.5px;color:rgba(255,255,255,.5);margin-bottom:1.5rem;line-height:1.6}
+.start-opts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.start-btn{display:flex;flex-direction:column;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:.9rem 1.2rem;cursor:pointer;color:white;font-family:'Outfit',sans-serif;font-size:13px;transition:background .18s,border-color .18s;min-width:130px}
+.start-btn:hover{background:rgba(255,255,255,.15);border-color:var(--rojo)}
+.start-btn .icon{font-size:28px}.start-btn .lbl{font-size:11px;color:rgba(255,255,255,.6);text-align:center}
+#videoEl{display:none;width:100%;max-height:480px;object-fit:cover;transform:scaleX(-1)}
+#overlayCanvas{display:none;position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#photoCanvas{display:none;max-width:100%;max-height:480px}
+#loadingEl{display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);flex-direction:column;align-items:center;justify-content:center;gap:12px;color:white;font-size:13px}
+#loadingEl.show{display:flex}
+.spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--rojo);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#errorEl{display:none;text-align:center;padding:2rem;color:white}
+#errorEl.show{display:block}
+.err-titulo{color:#ff7070;font-size:1rem;font-weight:500;margin-bottom:.5rem;margin-top:.5rem}
+.err-texto{font-size:12px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:1rem}
+.err-pasos{text-align:left;background:rgba(255,255,255,.07);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:12px;color:rgba(255,255,255,.75);line-height:2}
+.controls{display:flex;flex-direction:column;gap:.9rem}
+.panel{background:white;border:1px solid var(--borde);border-radius:12px;overflow:hidden}
+.panel-head{background:var(--negro);color:white;padding:.5rem .9rem;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.panel-body{padding:.85rem}
+.frames-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.frame-item{border:2px solid var(--borde);border-radius:9px;padding:7px 5px;cursor:pointer;text-align:center;transition:all .17s;background:var(--crema)}
+.frame-item:hover{border-color:#999;background:white}.frame-item.sel{border-color:var(--rojo);background:white}
+.frame-svg{width:100%;height:34px}.frame-name{font-size:9.5px;color:var(--gris);margin-top:3px;font-weight:500}
+.frame-item.sel .frame-name{color:var(--rojo)}
+.color-row{display:flex;gap:6px;flex-wrap:wrap}
+.color-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .14s,border-color .14s}
+.color-dot:hover{transform:scale(1.18)}.color-dot.sel{border-color:var(--negro);transform:scale(1.1)}
+#colorName{font-size:11px;color:var(--gris);margin-top:.45rem}
+.adj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:.5rem}
+.adj-btn{background:var(--crema);border:1px solid var(--borde);border-radius:6px;padding:6px;font-size:15px;cursor:pointer;text-align:center;transition:background .14s}
+.adj-btn:hover{background:var(--borde)}.adj-center{display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gris)}
+.slider-row{margin-bottom:.65rem}
+.slider-label{display:flex;justify-content:space-between;font-size:11px;color:var(--gris);margin-bottom:3px}
+.slider-label span:last-child{color:var(--negro);font-weight:500}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;background:var(--borde);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--rojo);cursor:pointer}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.toggle-lbl{font-size:12px;color:var(--negro)}
+.toggle{position:relative;width:38px;height:20px}
+.toggle input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;background:#ccc;border-radius:10px;cursor:pointer;transition:.25s}
+.tslider:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.25s}
+input:checked+.tslider{background:var(--rojo)}
+input:checked+.tslider:before{transform:translateX(18px)}
+.ia-note{font-size:10.5px;color:var(--gris);line-height:1.5;margin-bottom:.6rem}
+.manual-adj.ia-on{opacity:.35;pointer-events:none}
+.cta-box{background:var(--rojo);border-radius:12px;padding:1rem;text-align:center}
+.cta-title{font-family:'Playfair Display',serif;color:white;font-size:.95rem;margin-bottom:.3rem}
+.cta-sub{font-size:11px;color:rgba(255,255,255,.8);margin-bottom:.8rem;line-height:1.5}
+.btn-call,.btn-wa{border:none;padding:8px 18px;border-radius:22px;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;width:100%;margin-bottom:6px}
+.btn-call{background:white;color:var(--rojo)}.btn-wa{background:#25D366;color:white;margin-bottom:0}
+#fileInput{display:none}
+.footer{text-align:center;padding:1.5rem;font-size:11px;color:var(--gris);border-top:1px solid var(--borde);margin-top:1.5rem}
+@media(max-width:720px){.main-grid{grid-template-columns:1fr}.hero-title{font-size:1.3rem}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="logo">Óptica <span>De la Rosa</span></div>
+    <div class="logo-sub">Probador Virtual con IA</div>
+  </div>
+  <div class="header-right">Av. San Martín 151 · Banda del Río Salí</div>
+</div>
+<div class="container">
+  <div class="hero-title">Probate el armazón — la IA ajusta todo sola</div>
+  <div class="hero-sub">La inteligencia artificial detecta tu rostro y posiciona el armazón automáticamente.</div>
+  <div class="main-grid">
+    <div>
+      <div class="viewer-wrap">
+        <div class="viewer-toolbar">
+          <div><span class="badge"><span class="dot" id="dotEl"></span><span id="badgeText">Listo</span></span></div>
+          <div style="display:flex;gap:6px">
+            <button class="tbtn" id="btnCapture" onclick="capturePhoto()" style="display:none">📸 Capturar</button>
+            <button class="tbtn" id="btnRetake" onclick="goToStart()" style="display:none">↩ Volver</button>
+            <button class="tbtn red" id="btnDownload" onclick="downloadPhoto()" style="display:none">⬇ Descargar</button>
+          </div>
+        </div>
+        <div class="viewer-body">
+          <div id="screenStart">
+            <span class="start-icon">👓</span>
+            <div class="start-title">¿Cómo querés probar el armazón?</div>
+            <div class="start-sub">La IA detecta tu rostro y ajusta el armazón automáticamente</div>
+            <div class="start-opts">
+              <button class="start-btn" onclick="startCamera()">
+                <span class="icon">📷</span><strong>Cámara en vivo</strong>
+                <span class="lbl">Detección IA en tiempo real</span>
+              </button>
+              <button class="start-btn" onclick="document.getElementById('fileInput').click()">
+                <span class="icon">🖼️</span><strong>Subir foto</strong>
+                <span class="lbl">Selfie de tu galería</span>
+              </button>
+            </div>
+          </div>
+          <video id="videoEl" autoplay playsinline muted></video>
+          <canvas id="overlayCanvas"></canvas>
+          <canvas id="photoCanvas"></canvas>
+          <div id="loadingEl"><div class="spinner"></div><span id="loadingText">Activando cámara...</span></div>
+          <div id="errorEl">
+            <div style="font-size:40px">⚠️</div>
+            <div class="err-titulo">No se pudo acceder a la cámara</div>
+            <div class="err-texto">El navegador bloqueó el acceso. Seguí estos pasos:</div>
+            <div class="err-pasos">
+              1️⃣ Hacé clic en el ícono 🔒 o 📷 en la barra de dirección<br>
+              2️⃣ Buscá <strong>Cámara</strong> → cambiá a <strong>Permitir</strong><br>
+              3️⃣ Recargá la página con F5<br>
+              4️⃣ Volvé a hacer clic en <strong>Cámara en vivo</strong>
+            </div>
+            <button class="tbtn red" onclick="goToStart()" style="margin:0 auto;display:block">← Volver</button>
+          </div>
+        </div>
+      </div>
+      <div id="adjustPanel" style="display:none;margin-top:.9rem">
+        <div class="panel">
+          <div class="panel-head">Ajuste de posición</div>
+          <div class="panel-body">
+            <div class="toggle-row">
+              <span class="toggle-lbl">🤖 Detección IA automática</span>
+              <label class="toggle"><input type="checkbox" id="iaToggle" checked onchange="toggleIA(this.checked)"><span class="tslider"></span></label>
+            </div>
+            <div class="ia-note" id="iaNoteEl">La IA detecta los ojos y posiciona el armazón automáticamente.</div>
+            <div class="manual-adj ia-on" id="manualAdj">
+              <div class="adj-grid">
+                <div></div><button class="adj-btn" onclick="move(0,-6)">↑</button><div></div>
+                <button class="adj-btn" onclick="move(-8,0)">←</button><div class="adj-center">mover</div><button class="adj-btn" onclick="move(8,0)">→</button>
+                <div></div><button class="adj-btn" onclick="move(0,6)">↓</button><div></div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label"><span>Tamaño</span><span id="sizeVal">100%</span></div>
+                <input type="range" id="sizeSlider" min="40" max="200" value="100" step="1" oninput="onSize(this.value)">
+              </div>
+              <div class="slider-row">
+                <div class="slider-label"><span>Altura</span><span id="heightVal">40%</span></div>
+                <input type="range" id="heightSlider" min="15" max="70" value="40" step="1" oninput="onHeight(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="panel">
+        <div class="panel-head">Elegí el armazón</div>
+        <div class="panel-body"><div class="frames-grid" id="framesGrid"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">Color</div>
+        <div class="panel-body"><div class="color-row" id="colorRow"></div><div id="colorName">Negro mate</div></div>
+      </div>
+      <div class="cta-box">
+        <div class="cta-title">¿Te gustó cómo te queda?</div>
+        <div class="cta-sub">Contactanos y te asesoramos para encontrar los lentes perfectos para tu receta.</div>
+        <button class="btn-call" onclick="window.open('tel:+5493816631275')">📞 Llamar ahora</button>
+        <button class="btn-wa" onclick="window.open('https://wa.me/5493816631275?text=Hola!%20Probé%20el%20probador%20virtual%20y%20quiero%20consultar%20sobre%20un%20armazón.')">💬 WhatsApp</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="footer">© 2025 Óptica De la Rosa · Av. San Martín 151, Banda del Río Salí, Tucumán · +54 9 381 663-1275</div>
+<input type="file" id="fileInput" accept="image/*" onchange="loadFile(event)">
+
+<script>
+// ═══════ ARMAZONES ═══════
+const FRAMES=[
+  {id:'aviador',name:'Aviador',
+   draw(ctx,cx,cy,w,h,col){
+     const lw=w*.44,lh=h*.72;
+     ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.012);ctx.fillStyle=col+'22';
+     [cx-w*.25,cx+w*.25].forEach(x=>{ctx.beginPath();ctx.ellipse(x,cy,lw/2,lh/2,0,0,Math.PI*2);ctx.fill();ctx.stroke()});
+     ctx.beginPath();ctx.moveTo(cx-w*.03,cy-lh*.08);ctx.quadraticCurveTo(cx,cy-lh*.22,cx+w*.03,cy-lh*.08);ctx.stroke();
+     ctx.lineWidth=Math.max(1.5,w*.009);
+     [[cx-w*.25-lw/2,cy-lh*.1,cx-w*.5,cy],[cx+w*.25+lw/2,cy-lh*.1,cx+w*.5,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+   },
+   svg:`<ellipse cx="28" cy="23" rx="21" ry="15" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><ellipse cx="72" cy="23" rx="21" ry="15" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><path d="M49 19 Q50 13 51 19" stroke="currentColor" stroke-width="2" fill="none"/><line x1="7" y1="19" x2="0" y2="22" stroke="currentColor" stroke-width="2"/><line x1="93" y1="19" x2="100" y2="22" stroke="currentColor" stroke-width="2"/>`},
+  {id:'rectangular',name:'Rectangular',
+   draw(ctx,cx,cy,w,h,col){
+     const lw=w*.43,lh=h*.55,r=Math.max(4,w*.02);
+     ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.012);ctx.fillStyle=col+'18';
+     [cx-w*.25,cx+w*.25].forEach(x=>{ctx.beginPath();ctx.roundRect(x-lw/2,cy-lh/2,lw,lh,r);ctx.fill();ctx.stroke()});
+     ctx.lineWidth=Math.max(1.5,w*.009);
+     ctx.beginPath();ctx.moveTo(cx-w*.04,cy);ctx.lineTo(cx+w*.04,cy);ctx.stroke();
+     [[cx-w*.25-lw/2,cy-lh*.15,cx-w*.5,cy],[cx+w*.25+lw/2,cy-lh*.15,cx+w*.5,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+   },
+   svg:`<rect x="5" y="11" width="38" height="24" rx="4" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><rect x="57" y="11" width="38" height="24" rx="4" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><line x1="43" y1="23" x2="57" y2="23" stroke="currentColor" stroke-width="2"/><line x1="0" y1="19" x2="5" y2="19" stroke="currentColor" stroke-width="2"/><line x1="100" y1="19" x2="95" y2="19" stroke="currentColor" stroke-width="2"/>`},
+  {id:'redondo',name:'Redondo',
+   draw(ctx,cx,cy,w,h,col){
+     const r=h*.38;
+     ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.011);ctx.fillStyle=col+'18';
+     [cx-w*.23,cx+w*.23].forEach(x=>{ctx.beginPath();ctx.arc(x,cy,r,0,Math.PI*2);ctx.fill();ctx.stroke()});
+     ctx.lineWidth=Math.max(1.5,w*.009);
+     ctx.beginPath();ctx.moveTo(cx-w*.23+r,cy-r*.1);ctx.lineTo(cx+w*.23-r,cy-r*.1);ctx.stroke();
+     [[cx-w*.23-r,cy-r*.1,cx-w*.48,cy+r*.1],[cx+w*.23+r,cy-r*.1,cx+w*.48,cy+r*.1]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+   },
+   svg:`<circle cx="28" cy="23" r="18" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><circle cx="72" cy="23" r="18" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><line x1="46" y1="21" x2="54" y2="21" stroke="currentColor" stroke-width="2"/><line x1="0" y1="19" x2="10" y2="19" stroke="currentColor" stroke-width="2"/><line x1="100" y1="19" x2="90" y2="19" stroke="currentColor" stroke-width="2"/>`},
+  {id:'cateye',name:'Cat Eye',
+   draw(ctx,cx,cy,w,h,col){
+     ctx.strokeStyle=col;ctx.lineWidth=Math.max(2.5,w*.013);ctx.fillStyle=col+'20';
+     [-1,1].forEach(s=>{
+       const ox=cx+s*w*.24;
+       ctx.beginPath();ctx.moveTo(ox-s*w*.21,cy+h*.22);ctx.quadraticCurveTo(ox-s*w*.22,cy-h*.2,ox+s*w*.01,cy-h*.38);ctx.quadraticCurveTo(ox+s*w*.22,cy-h*.1,ox+s*w*.2,cy+h*.22);ctx.quadraticCurveTo(ox,cy+h*.34,ox-s*w*.21,cy+h*.22);ctx.closePath();ctx.fill();ctx.stroke();
+     });
+     ctx.lineWidth=Math.max(1.5,w*.009);ctx.beginPath();ctx.moveTo(cx-w*.03,cy);ctx.lineTo(cx+w*.03,cy);ctx.stroke();
+   },
+   svg:`<path d="M5 32 Q6 10 26 7 Q44 9 43 32 Q24 39 5 32Z" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><path d="M95 32 Q94 10 74 7 Q56 9 57 32 Q76 39 95 32Z" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><line x1="43" y1="22" x2="57" y2="22" stroke="currentColor" stroke-width="2"/>`},
+  {id:'wayfarer',name:'Wayfarer',
+   draw(ctx,cx,cy,w,h,col){
+     const lw=w*.43,lh=h*.62;
+     ctx.strokeStyle=col;ctx.lineWidth=Math.max(3,w*.016);ctx.fillStyle=col+'22';
+     [cx-w*.245,cx+w*.245].forEach(x=>{
+       ctx.beginPath();ctx.moveTo(x-lw/2,cy-lh*.35);ctx.lineTo(x+lw/2,cy-lh*.48);ctx.lineTo(x+lw/2,cy+lh*.38);ctx.quadraticCurveTo(x+lw/2,cy+lh*.52,x+lw*.3,cy+lh*.52);ctx.lineTo(x-lw*.3,cy+lh*.52);ctx.quadraticCurveTo(x-lw/2,cy+lh*.52,x-lw/2,cy+lh*.38);ctx.closePath();ctx.fill();ctx.stroke();
+     });
+     ctx.lineWidth=Math.max(2,w*.011);ctx.beginPath();ctx.moveTo(cx-w*.03,cy-lh*.1);ctx.lineTo(cx+w*.03,cy-lh*.1);ctx.stroke();
+     ctx.lineWidth=Math.max(1.5,w*.009);
+     [[cx-w*.245-lw/2,cy-lh*.2,cx-w*.49,cy],[cx+w*.245+lw/2,cy-lh*.2,cx+w*.49,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+   },
+   svg:`<path d="M4 17 L42 12 L42 36 Q42 42 36 42 L12 42 Q6 42 4 36Z" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".12"/><path d="M96 17 L58 12 L58 36 Q58 42 64 42 L88 42 Q94 42 96 36Z" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".12"/><line x1="42" y1="26" x2="58" y2="26" stroke="currentColor" stroke-width="2"/><line x1="0" y1="22" x2="4" y2="22" stroke="currentColor" stroke-width="2"/><line x1="100" y1="22" x2="96" y2="22" stroke="currentColor" stroke-width="2"/>`},
+  {id:'hexagonal',name:'Hexagonal',
+   draw(ctx,cx,cy,w,h,col){
+     const rx=w*.21,ry=h*.35;
+     ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,w*.011);ctx.fillStyle=col+'18';
+     [cx-w*.24,cx+w*.24].forEach(x=>{
+       ctx.beginPath();for(let i=0;i<6;i++){const a=(Math.PI/3)*i-Math.PI/6;ctx.lineTo(x+rx*Math.cos(a),cy+ry*Math.sin(a))}ctx.closePath();ctx.fill();ctx.stroke();
+     });
+     ctx.lineWidth=Math.max(1.5,w*.009);ctx.beginPath();ctx.moveTo(cx-w*.03,cy);ctx.lineTo(cx+w*.03,cy);ctx.stroke();
+     [[cx-w*.24-rx,cy-ry*.1,cx-w*.49,cy],[cx+w*.24+rx,cy-ry*.1,cx+w*.49,cy]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()});
+   },
+   svg:`<polygon points="28,8 44,15 44,32 28,39 12,32 12,15" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><polygon points="72,8 88,15 88,32 72,39 56,32 56,15" stroke="currentColor" stroke-width="2.5" fill="currentColor" fill-opacity=".1"/><line x1="44" y1="23" x2="56" y2="23" stroke="currentColor" stroke-width="2"/><line x1="0" y1="18" x2="12" y2="18" stroke="currentColor" stroke-width="2"/><line x1="100" y1="18" x2="88" y2="18" stroke="currentColor" stroke-width="2"/>`}
+];
+const COLORS=[
+  {name:'Negro mate',hex:'#1a1a1a'},{name:'Carey marrón',hex:'#7B4A1E'},
+  {name:'Carey caramelo',hex:'#C4873A'},{name:'Rojo De la Rosa',hex:'#C8102E'},
+  {name:'Azul marino',hex:'#1B2A6B'},{name:'Verde oliva',hex:'#4A6741'},
+  {name:'Dorado',hex:'#B8970F'},{name:'Plateado',hex:'#7A7A7A'},
+  {name:'Rosa nude',hex:'#C4857A'},{name:'Transparente',hex:'#7AAABB'},
+];
+
+// ═══════ ESTADO ═══════
+let currentFrame=FRAMES[0],currentColor=COLORS[0].hex;
+let iaActive=true,mode='start';
+let stream=null,animFrame=null;
+let offsetX=0,offsetY=0,scaleM=1,heightFrac=40;
+// Detección facial con API nativa del navegador (sin MediaPipe)
+let detector=null,lastFaceBox=null;
+
+// ═══════ UI ═══════
+function initFrames(){
+  const g=document.getElementById('framesGrid');g.innerHTML='';
+  FRAMES.forEach(f=>{
+    const d=document.createElement('div');
+    d.className='frame-item'+(f.id===currentFrame.id?' sel':'');
+    d.onclick=()=>{currentFrame=f;initFrames()};
+    d.innerHTML=`<svg class="frame-svg" viewBox="0 0 100 46" fill="none" style="color:${currentColor}">${f.svg}</svg><div class="frame-name">${f.name}</div>`;
+    g.appendChild(d);
+  });
+}
+function initColors(){
+  const r=document.getElementById('colorRow');r.innerHTML='';
+  COLORS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='color-dot'+(c.hex===currentColor?' sel':'');
+    d.style.background=c.hex;d.title=c.name;
+    d.onclick=()=>{currentColor=c.hex;document.getElementById('colorName').textContent=c.name;initFrames();initColors()};
+    r.appendChild(d);
+  });
+}
+
+// ═══════ DETECCIÓN FACIAL — FaceDetector API nativa ═══════
+async function initDetector(){
+  // Usamos la FaceDetector API nativa del navegador si está disponible
+  if('FaceDetector' in window){
+    detector=new FaceDetector({fastMode:true,maxDetectedFaces:1});
+    return true;
+  }
+  return false;
+}
+
+async function detectFace(videoEl){
+  if(!detector||!videoEl.videoWidth) return null;
+  try{
+    const faces=await detector.detect(videoEl);
+    if(faces&&faces.length>0){
+      const f=faces[0];
+      return f.boundingBox;
+    }
+  }catch(e){}
+  return null;
+}
+
+// ═══════ CÁMARA ═══════
+async function startCamera(){
+  showLoading(true,'Activando cámara...');
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},
+      audio:false
+    });
+    const video=document.getElementById('videoEl');
+    video.srcObject=stream;
+    await video.play();
+    video.style.display='block';
+    const overlay=document.getElementById('overlayCanvas');
+    overlay.style.display='block';
+    document.getElementById('screenStart').style.display='none';
+    document.getElementById('errorEl').classList.remove('show');
+    document.getElementById('btnCapture').style.display='inline-block';
+    document.getElementById('btnRetake').style.display='none';
+    document.getElementById('btnDownload').style.display='none';
+    document.getElementById('adjustPanel').style.display='block';
+    mode='camera';
+    setBadge('verde','Cámara activa');
+    showLoading(false);
+    // intentar iniciar detector nativo
+    await initDetector();
+    startLoop();
+  }catch(err){
+    showLoading(false);
+    document.getElementById('screenStart').style.display='none';
+    document.getElementById('errorEl').classList.add('show');
+    console.error('Cámara error:',err);
+  }
+}
+
+function startLoop(){
+  const video=document.getElementById('videoEl');
+  const overlay=document.getElementById('overlayCanvas');
+  const ctx=overlay.getContext('2d');
+  let frameCount=0;
+
+  async function loop(){
+    if(mode!=='camera'){return}
+    const vr=video.getBoundingClientRect();
+    const W=Math.round(vr.width),H=Math.round(vr.height);
+    if(overlay.width!==W){overlay.width=W;overlay.height=H}
+    ctx.clearRect(0,0,W,H);
+
+    // Detectar cara cada 5 frames para no sobrecargar
+    if(iaActive&&frameCount%5===0){
+      const box=await detectFace(video);
+      if(box) lastFaceBox=box;
+    }
+    frameCount++;
+
+    if(iaActive&&lastFaceBox){
+      // La cámara está espejada en CSS, espejamos el bounding box
+      const scaleX=W/video.videoWidth;
+      const scaleY=H/video.videoHeight;
+      // Espejo: x se invierte
+      const bx=(video.videoWidth-lastFaceBox.x-lastFaceBox.width)*scaleX;
+      const by=lastFaceBox.y*scaleY;
+      const bw=lastFaceBox.width*scaleX;
+      const bh=lastFaceBox.height*scaleY;
+      // Ojos están aprox en 38% de la altura de la cara desde arriba
+      const eyeY=by+bh*0.38;
+      const eyeX=bx+bw*0.5;
+      const gW=bw*1.05;
+      const gH=gW*0.38;
+      setBadge('verde','IA: rostro detectado ✓');
+      ctx.save();ctx.translate(eyeX,eyeY);
+      currentFrame.draw(ctx,0,0,gW,gH,currentColor);
+      ctx.restore();
+    } else if(iaActive){
+      setBadge('amarillo','Buscando rostro...');
+      // Fallback: posición centrada proporcional
+      const cx=W*0.5,cy=H*0.4;
+      const gW=W*0.56,gH=gW*0.38;
+      currentFrame.draw(ctx,cx,cy,gW,gH,currentColor);
+    } else {
+      // Manual
+      const cx=W*0.5+offsetX,cy=H*(heightFrac/100)+offsetY;
+      const gW=W*0.56*scaleM,gH=gW*0.38;
+      currentFrame.draw(ctx,cx,cy,gW,gH,currentColor);
+    }
+    animFrame=requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ═══════ CAPTURA ═══════
+function capturePhoto(){
+  const video=document.getElementById('videoEl');
+  const canvas=document.getElementById('photoCanvas');
+  const W=video.videoWidth,H=video.videoHeight;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  // Espejo
+  ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,W,H);ctx.restore();
+  // Armazón
+  const overlay=document.getElementById('overlayCanvas');
+  const sX=W/overlay.width,sY=H/overlay.height;
+  if(iaActive&&lastFaceBox){
+    const scaleX=overlay.width/video.videoWidth;
+    const scaleY=overlay.height/video.videoHeight;
+    const bx=(video.videoWidth-lastFaceBox.x-lastFaceBox.width)*scaleX;
+    const by=lastFaceBox.y*scaleY;
+    const bw=lastFaceBox.width*scaleX;
+    const bh=lastFaceBox.height*scaleY;
+    const eyeY=(by+bh*0.38)*sY;
+    const eyeX=(bx+bw*0.5)*sX;
+    const gW=bw*1.05*sX,gH=gW*0.38;
+    ctx.save();ctx.translate(eyeX,eyeY);
+    currentFrame.draw(ctx,0,0,gW,gH,currentColor);
+    ctx.restore();
+  } else {
+    const cx=W*0.5+offsetX*sX,cy=H*(heightFrac/100)+offsetY*sY;
+    const gW=W*0.56*scaleM,gH=gW*0.38;
+    currentFrame.draw(ctx,cx,cy,gW,gH,currentColor);
+  }
+  stopCamera();
+  canvas.style.display='block';
+  document.getElementById('videoEl').style.display='none';
+  document.getElementById('overlayCanvas').style.display='none';
+  mode='photo';
+  document.getElementById('btnCapture').style.display='none';
+  document.getElementById('btnRetake').style.display='inline-block';
+  document.getElementById('btnDownload').style.display='inline-block';
+  setBadge('','📸 Foto capturada');
+}
+
+function stopCamera(){
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  lastFaceBox=null;
+}
+
+// ═══════ FOTO SUBIDA ═══════
+function loadFile(evt){
+  const file=evt.target.files[0];if(!file)return;
+  evt.target.value='';
+  showLoading(true,'Cargando imagen...');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      stopCamera();
+      document.getElementById('screenStart').style.display='none';
+      document.getElementById('videoEl').style.display='none';
+      document.getElementById('overlayCanvas').style.display='none';
+      const canvas=document.getElementById('photoCanvas');
+      const maxW=Math.min(img.width,800);
+      const ratio=maxW/img.width;
+      canvas.width=img.width*ratio;canvas.height=img.height*ratio;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const W=canvas.width,H=canvas.height;
+      const cx=W*0.5+offsetX,cy=H*(heightFrac/100)+offsetY;
+      const gW=W*0.56*scaleM,gH=gW*0.38;
+      currentFrame.draw(ctx,cx,cy,gW,gH,currentColor);
+      canvas.style.display='block';
+      showLoading(false);
+      mode='photo';
+      document.getElementById('btnCapture').style.display='none';
+      document.getElementById('btnRetake').style.display='inline-block';
+      document.getElementById('btnDownload').style.display='inline-block';
+      document.getElementById('adjustPanel').style.display='block';
+      setBadge('','🖼️ Foto cargada — ajustá el armazón');
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════ TOGGLE IA ═══════
+function toggleIA(on){
+  iaActive=on;
+  document.getElementById('manualAdj').classList.toggle('ia-on',on);
+  document.getElementById('iaNoteEl').textContent=on
+    ?'La IA detecta los ojos y posiciona el armazón automáticamente.'
+    :'Modo manual activo. Usá las flechas y sliders para ajustar.';
+}
+
+// ═══════ AJUSTE MANUAL ═══════
+function move(dx,dy){offsetX+=dx;offsetY+=dy}
+function onSize(v){scaleM=v/100;document.getElementById('sizeVal').textContent=v+'%'}
+function onHeight(v){heightFrac=parseInt(v);document.getElementById('heightVal').textContent=v+'%'}
+
+// ═══════ UTILS ═══════
+function goToStart(){
+  stopCamera();mode='start';
+  offsetX=0;offsetY=0;scaleM=1;heightFrac=40;lastFaceBox=null;
+  document.getElementById('sizeSlider').value=100;
+  document.getElementById('heightSlider').value=40;
+  document.getElementById('sizeVal').textContent='100%';
+  document.getElementById('heightVal').textContent='40%';
+  document.getElementById('screenStart').style.display='block';
+  ['videoEl','overlayCanvas','photoCanvas'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('errorEl').classList.remove('show');
+  ['btnCapture','btnRetake','btnDownload'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('adjustPanel').style.display='none';
+  setBadge('','Listo');
+}
+function showLoading(v,txt='Cargando...'){
+  document.getElementById('loadingEl').classList.toggle('show',v);
+  if(txt)document.getElementById('loadingText').textContent=txt;
+}
+function setBadge(tipo,txt){
+  const dot=document.getElementById('dotEl');
+  dot.className='dot'+(tipo?' '+tipo:'');
+  document.getElementById('badgeText').textContent=txt;
+}
+function downloadPhoto(){
+  const c=document.getElementById('photoCanvas');if(!c.width)return;
+  const a=document.createElement('a');
+  a.download='optica-de-la-rosa-armazon.jpg';
+  a.href=c.toDataURL('image/jpeg',.93);a.click();
+}
+
+initFrames();initColors();
+</script>
+</body>
+</html>
